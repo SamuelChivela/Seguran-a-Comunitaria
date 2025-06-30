@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel do Usuário</title>
+
+  <!-- Leaflet para Mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+    }
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+    }
+    .logout-btn {
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      background: white;
+      color: #1e88e5;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 650px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h2, h3 {
+      color: #1e88e5;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.1rem;
+      margin: 0.5rem 0;
+    }
+    button {
+      background: #1e88e5;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      text-align: left;
+    }
+    li {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    #map {
+      height: 300px;
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Painel do Usuário</h1>
+  <button class="logout-btn" onclick="logout()">Sair</button>
+</header>
+
+<div class="container">
+  <h2>Bem-vindo(a), <span id="nomeUsuario"></span>!</h2>
+  <p><strong>Email:</strong> <span id="emailUsuario"></span></p>
+
+  <button onclick="enviarAlertaPânico()">🚨 Enviar Alerta de Pânico</button>
+  <p id="statusAlerta" style="margin-top:1rem;color:green;font-weight:bold;"></p>
+
+  <h3>Minhas Ocorrências</h3>
+  <ul id="listaOcorrencias"></ul>
+
+  <h3>Mapa das Ocorrências</h3>
+  <div id="map"></div>
+</div>
+
+<script>
+  let mapa;
+  let marcadores = [];
+
+  function atualizarMapa(ocorrencias) {
+    // Inicializar mapa uma vez
+    if (!mapa) {
+      mapa = L.map('map').setView([-11.2027, 17.8739], 5); // Angola
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(mapa);
+    }
+
+    // Remove marcadores antigos
+    marcadores.forEach(m => mapa.removeLayer(m));
+    marcadores = [];
+
+    // Adiciona novos marcadores
+    ocorrencias.forEach(oc => {
+      const marcador = L.marker([oc.lat, oc.lng]).addTo(mapa)
+        .bindPopup(`<strong>${oc.tipo}</strong><br>${new Date(oc.data).toLocaleString()}`);
+      marcadores.push(marcador);
+    });
+
+    // Centraliza no último ponto
+    if (ocorrencias.length > 0) {
+      mapa.setView([ocorrencias[0].lat, ocorrencias[0].lng], 13);
+    }
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    db.ref("usuarios/" + user.uid).once("value").then(snapshot => {
+      const dados = snapshot.val();
+      if (!dados || dados.tipo !== "usuario") {
+        alert("Acesso restrito.");
+        auth.signOut().then(() => window.location.href = "login.html");
+        return;
+      }
+
+      document.getElementById("nomeUsuario").textContent = dados.nome || "Usuário";
+      document.getElementById("emailUsuario").textContent = dados.email || "";
+
+      // Buscar ocorrências do usuário
+      db.ref("ocorrencias").orderByChild("uid").equalTo(user.uid).on("value", snapshot => {
+        const lista = document.getElementById("listaOcorrencias");
+        lista.innerHTML = "";
+        const ocorrencias = [];
+
+        if (!snapshot.exists()) {
+          lista.innerHTML = "<li style='color:#888;'>Nenhuma ocorrência enviada ainda.</li>";
+          atualizarMapa([]);
+          return;
+        }
+
+        snapshot.forEach(child => {
+          const oc = child.val();
+          ocorrencias.push(oc);
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <strong>Tipo:</strong> ${oc.tipo}<br>
+            <strong>Data:</strong> ${new Date(oc.data).toLocaleString()}<br>
+            <strong>Localização:</strong> ${oc.lat.toFixed(4)}, ${oc.lng.toFixed(4)}
+          `;
+          lista.appendChild(item);
+        });
+
+        atualizarMapa(ocorrencias);
+      });
+    });
+  });
+
+  function logout() {
+    auth.signOut().then(() => window.location.href = "login.html");
+  }
+
+  function enviarAlertaPânico() {
+    if (!navigator.geolocation) {
+      alert("Geolocalização não suportada.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(position => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert("Usuário não autenticado.");
+        return;
+      }
+
+      db.ref("ocorrencias").push({
+        tipo: "Alerta de Pânico",
+        descricao: "Alerta enviado pelo usuário",
+        lat: lat,
+        lng: lng,
+        data: new Date().toISOString(),
+        uid: user.uid
+      }).then(() => {
+        document.getElementById("statusAlerta").textContent = "✅ Alerta enviado com sucesso!";
+      }).catch(err => {
+        alert("Erro ao enviar alerta: " + err.message);
+      });
+    }, error => {
+      alert("Erro ao obter localização: " + error.message);
+    });
+  }
+</script>
+
+</body>
+</html>

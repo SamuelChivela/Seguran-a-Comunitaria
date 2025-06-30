@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Segurança Comunitária - Início</title>
+
+  <!-- Leaflet CSS para o mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    #mapa {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      z-index: 0;
+      filter: brightness(0.5);
+    }
+
+    .conteudo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      padding: 1rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      animation: piscar 1.2s infinite alternate;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      animation: aparecer 2s ease-in-out;
+    }
+
+    .btn-entrar {
+      background: #1e88e5;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      animation: aparecer 3s ease-in-out;
+    }
+
+    .btn-entrar:hover {
+      background-color: #1565c0;
+    }
+
+    @keyframes piscar {
+      0% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="mapa"></div>
+
+<div class="conteudo">
+  <h1>🔒 Sistema de Segurança Comunitária</h1>
+  <p>Seja bem-vindo! Aqui você está seguro. Protegemos a sua comunidade.</p>
+  <p>Desenvolvedor (Samuel Elias Chivela)...!</p>
+  <button class="btn-entrar" onclick="acessarLogin()">Entrar no Sistema</button>
+</div>
+
+<script>
+  // Inicializa o mapa
+  const mapa = L.map('mapa').setView([-8.8383, 13.2344], 13); // Luanda
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+
+  // Pontos de exemplo
+  const pontos = [
+    { lat: -8.8383, lng: 13.2344, titulo: "Posto de Segurança 1" },
+    { lat: -8.835, lng: 13.238, titulo: "Alerta ativo!" }
+  ];
+
+  pontos.forEach(p => {
+    L.marker([p.lat, p.lng]).addTo(mapa).bindPopup(p.titulo);
+  });
+
+  function acessarLogin() {
+    window.location.href = "login.html";
+  }
+</script>
+
+</body>
+</html>

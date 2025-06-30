@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Usuários - Administração</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+    }
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+    }
+    .logout-btn {
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      background: white;
+      color: #1e88e5;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #1e88e5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #e3f2fd;
+    }
+    tr:hover {
+      background-color: #f1f9ff;
+    }
+    .btn-editar, .btn-remover {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-weight: 600;
+      margin-right: 5px;
+      color: white;
+    }
+    .btn-editar {
+      background-color: #1976d2;
+    }
+    .btn-editar:hover {
+      background-color: #145ea8;
+    }
+    .btn-remover {
+      background-color: #d32f2f;
+    }
+    .btn-remover:hover {
+      background-color: #a52727;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Lista de Usuários</h1>
+  <button class="logout-btn" onclick="logout()">Sair</button>
+</header>
+
+<div class="container">
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Email</th>
+        <th>Tipo</th>
+        <th>Telefone</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="usuariosTabela">
+      <!-- Usuários aparecerão aqui -->
+    </tbody>
+  </table>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="firebase.js"></script>
+
+<script>
+  const tabela = document.getElementById("usuariosTabela");
+
+  // Verifica autenticação e se é admin
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    db.ref("usuarios/" + user.uid).once("value").then(snapshot => {
+      const dados = snapshot.val();
+      if (!dados || dados.tipo !== "admin") {
+        alert("Acesso restrito a administradores.");
+        auth.signOut().then(() => window.location.href = "login.html");
+        return;
+      }
+
+      carregarUsuarios();
+    });
+  });
+
+  // Carregar usuários com botões de ação
+  function carregarUsuarios() {
+    db.ref("usuarios").once("value").then(snapshot => {
+      tabela.innerHTML = ""; // limpa tabela
+
+      const usuarios = snapshot.val();
+      if (!usuarios) {
+        tabela.innerHTML = "<tr><td colspan='5'>Nenhum usuário cadastrado.</td></tr>";
+        return;
+      }
+
+      for (const uid in usuarios) {
+        const u = usuarios[uid];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${u.nome || '-'}</td>
+          <td>${u.email || '-'}</td>
+          <td>${u.tipo || '-'}</td>
+          <td>${u.telefone || '-'}</td>
+          <td>
+            <button class="btn-editar" onclick="editarUsuario('${uid}')">Editar</button>
+            <button class="btn-remover" onclick="removerUsuario('${uid}')">Remover</button>
+          </td>
+        `;
+        tabela.appendChild(tr);
+      }
+    }).catch(error => {
+      alert("Erro ao carregar usuários: " + error.message);
+    });
+  }
+
+  // Função para editar usuário
+  function editarUsuario(uid) {
+    db.ref("usuarios/" + uid).once("value").then(snapshot => {
+      const u = snapshot.val();
+      if (!u) return alert("Usuário não encontrado.");
+
+      const novoNome = prompt("Editar nome:", u.nome || "");
+      if (novoNome === null) return; // Cancelou
+
+      const novoTelefone = prompt("Editar telefone:", u.telefone || "");
+      if (novoTelefone === null) return;
+
+      const novoTipo = prompt("Editar tipo (admin/usuario):", u.tipo || "usuario");
+      if (novoTipo === null) return;
+
+      db.ref("usuarios/" + uid).update({
+        nome: novoNome,
+        telefone: novoTelefone,
+        tipo: novoTipo
+      }).then(() => {
+        alert("Usuário atualizado com sucesso!");
+        carregarUsuarios();
+      }).catch(err => {
+        alert("Erro ao atualizar usuário: " + err.message);
+      });
+    });
+  }
+
+  // Função para remover usuário
+  function removerUsuario(uid) {
+    if (!confirm("Tem certeza que deseja remover este usuário?")) return;
+
+    db.ref("usuarios/" + uid).remove()
+      .then(() => {
+        alert("Usuário removido com sucesso!");
+        carregarUsuarios();
+      })
+      .catch(err => {
+        alert("Erro ao remover usuário: " + err.message);
+      });
+  }
+
+  // Logout
+  function logout() {
+    auth.signOut().then(() => window.location.href = "login.html");
+  }
+</script>
+
+</body>
+</html>

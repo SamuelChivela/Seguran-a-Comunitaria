@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Usuários</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="firebase.js"></script>
+
+  <!-- jsPDF e autotable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- SheetJS para Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #1e88e5;
+    }
+
+    .btn-container {
+      text-align: right;
+      margin-bottom: 10px;
+    }
+
+    .btn-container button {
+      margin-left: 10px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      background-color: #1e88e5;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th {
+      background-color: #1e88e5;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    button.action {
+      background-color: #e91e63;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      margin: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button.edit {
+      background-color: #4caf50;
+    }
+
+    @media(max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      td {
+        position: relative;
+        padding-left: 50%;
+      }
+
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Usuários Cadastrados</h2>
+
+  <div class="btn-container">
+    <button onclick="exportarPDF()">📄 Exportar PDF</button>
+    <button onclick="exportarExcel()">📊 Exportar Excel</button>
+  </div>
+
+  <table id="tabelaUsuarios">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Email</th>
+        <th>Telefone</th>
+        <th>Província</th>
+        <th>Gênero</th>
+        <th>Tipo</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const tabela = document.querySelector("#tabelaUsuarios tbody");
+
+    db.ref("usuarios").once("value").then(snapshot => {
+      const usuarios = snapshot.val();
+
+      if (!usuarios) {
+        tabela.innerHTML = '<tr><td colspan="7">Nenhum usuário encontrado.</td></tr>';
+        return;
+      }
+
+      Object.entries(usuarios).forEach(([uid, dados]) => {
+        const linha = document.createElement("tr");
+        linha.innerHTML = `
+          <td data-label="Nome">${dados.nome || "—"}</td>
+          <td data-label="Email">${dados.email || "—"}</td>
+          <td data-label="Telefone">${dados.telefone || "—"}</td>
+          <td data-label="Província">${dados.provincia || "—"}</td>
+          <td data-label="Gênero">${dados.genero || "—"}</td>
+          <td data-label="Tipo">${dados.tipo || "—"}</td>
+          <td data-label="Ações">
+            <button class="action edit" onclick="editarUsuario('${uid}')">✏️ Editar</button>
+            <button class="action" onclick="excluirUsuario('${uid}')">🗑️ Excluir</button>
+          </td>
+        `;
+        tabela.appendChild(linha);
+      });
+    });
+
+    function excluirUsuario(uid) {
+      if (confirm("Tem certeza que deseja excluir este usuário?")) {
+        db.ref("usuarios/" + uid).remove()
+          .then(() => {
+            alert("Usuário excluído.");
+            location.reload();
+          })
+          .catch(error => alert("Erro ao excluir: " + error.message));
+      }
+    }
+
+    function editarUsuario(uid) {
+      db.ref("usuarios/" + uid).once("value").then(snapshot => {
+        const dados = snapshot.val();
+        const novoNome = prompt("Novo nome:", dados.nome);
+        const novoTelefone = prompt("Novo telefone:", dados.telefone);
+        const novaProvincia = prompt("Nova província:", dados.provincia);
+        const novoGenero = prompt("Novo gênero:", dados.genero);
+        const novoTipo = prompt("Tipo de usuário (usuario/admin):", dados.tipo);
+
+        return db.ref("usuarios/" + uid).update({
+          nome: novoNome,
+          telefone: novoTelefone,
+          provincia: novaProvincia,
+          genero: novoGenero,
+          tipo: novoTipo
+        });
+      }).then(() => {
+        alert("Usuário atualizado.");
+        location.reload();
+      }).catch(error => alert("Erro ao editar: " + error.message));
+    }
+
+    function exportarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Lista de Usuários", 14, 14);
+      doc.autoTable({ html: '#tabelaUsuarios', startY: 20 });
+      doc.save("usuarios.pdf");
+    }
+
+    function exportarExcel() {
+      const tabela = document.getElementById("tabelaUsuarios");
+      const wb = XLSX.utils.table_to_book(tabela, { sheet: "Usuários" });
+      XLSX.writeFile(wb, "usuarios.xlsx");
+    }
+  </script>
+
+</body>
+</html>

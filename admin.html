@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <!-- Ou para arquivo .png -->
+  <link rel="icon" href="assets/icon.png" type="image/png" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel do Administrador</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+    }
+
+    .logout-btn {
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      background: white;
+      color: #1e88e5;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .container {
+      padding: 1rem;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    #map {
+      height: 50vh;
+      width: 100%;
+      margin-bottom: 1rem;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+
+    canvas {
+      margin: 1rem 0;
+      background: white;
+      border-radius: 6px;
+      padding: 1rem;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 6px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #e3f2fd;
+    }
+
+    .btn-group {
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+      transition: background-color 0.3s ease;
+      color: white;
+    }
+
+    .btn-rastrear {
+      background-color: #1976d2;
+    }
+
+    .btn-rastrear:hover {
+      background-color: #145ea8;
+    }
+
+    .btn-localizar {
+      background-color: #0288d1;
+    }
+
+    .btn-localizar:hover {
+      background-color: #026fa1;
+    }
+
+    .btn-sms {
+      background-color: #2e7d32;
+    }
+
+    .btn-sms:hover {
+      background-color: #245923;
+    }
+
+    .btn-usuarios {
+      background-color: #6a1b9a;
+    }
+
+    .btn-usuarios:hover {
+      background-color: #4a148c;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Painel do Administrador</h1>
+  <button class="logout-btn" onclick="logout()">Sair</button>
+</header>
+
+<div class="container">
+
+  <div class="btn-group">
+    <button class="btn btn-rastrear" onclick="rastrearUltimoAlerta()">Rastrear Último Alerta</button>
+    <button class="btn btn-localizar" onclick="centralizarMapa()">Centralizar Mapa</button>
+    <button class="btn btn-sms" onclick="enviarSMS()">Enviar SMS de Alerta</button>
+    <button class="btn btn-usuarios" onclick="verUsuarios()">👥 Ver Usuários</button>
+  </div>
+
+  <div id="map"></div>
+
+  <h2>📊 Estatísticas de Alertas</h2>
+  <canvas id="graficoPanico" width="400" height="200"></canvas>
+
+  <h2>📍 Ocorrências de Pânico</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Descrição</th>
+        <th>Data</th>
+        <th>Localização</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaOcorrencias"></tbody>
+  </table>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="firebase.js"></script>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  // Protege a página
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+    db.ref("usuarios/" + user.uid).once("value").then(snapshot => {
+      const dados = snapshot.val();
+      if (!dados || dados.tipo !== "admin") {
+        alert("Acesso restrito a administradores.");
+        auth.signOut().then(() => window.location.href = "login.html");
+      }
+    });
+  });
+
+  // Inicializa o mapa
+  const mapa = L.map('map').setView([-17.0665, 15.7257], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+
+  // Variáveis para controle dos marcadores
+  let ultimoAlerta = null;
+  let marcadores = {};
+
+  const tabela = document.getElementById("tabelaOcorrencias");
+  const ctx = document.getElementById("graficoPanico").getContext("2d");
+  let chart;
+
+  // Ouve alertas adicionados
+  db.ref("ocorrencias").on("child_added", snapshot => {
+    const o = snapshot.val();
+    const id = snapshot.key;
+
+    // Guarda último alerta
+    ultimoAlerta = { id, ...o };
+
+    // Adiciona marcador no mapa
+    if (marcadores[id]) {
+      mapa.removeLayer(marcadores[id]);
+    }
+    const marcador = L.marker([o.lat, o.lng]).addTo(mapa)
+      .bindPopup(`<strong>${o.tipo}</strong><br>${o.descricao}<br><small>${new Date(o.data).toLocaleString()}</small>`);
+    marcadores[id] = marcador;
+
+    // Atualiza tabela
+    adicionarLinhaTabela(o);
+
+    // Atualiza gráfico
+    atualizarGrafico();
+  });
+
+  // Ouve alertas alterados para atualizar marcador
+  db.ref("ocorrencias").on("child_changed", snapshot => {
+    const o = snapshot.val();
+    const id = snapshot.key;
+
+    // Atualiza marcador existente
+    if (marcadores[id]) {
+      mapa.removeLayer(marcadores[id]);
+    }
+    const marcador = L.marker([o.lat, o.lng]).addTo(mapa)
+      .bindPopup(`<strong>${o.tipo}</strong><br>${o.descricao}<br><small>${new Date(o.data).toLocaleString()}</small>`);
+    marcadores[id] = marcador;
+
+    // Atualiza tabela e gráfico
+    limparTabela();
+    atualizarTabelaCompleta();
+    atualizarGrafico();
+  });
+
+  // Função para adicionar linha na tabela
+  function adicionarLinhaTabela(ocorrencia) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${ocorrencia.tipo}</td>
+      <td>${ocorrencia.descricao}</td>
+      <td>${new Date(ocorrencia.data).toLocaleString()}</td>
+      <td>${ocorrencia.lat.toFixed(4)}, ${ocorrencia.lng.toFixed(4)}</td>
+    `;
+    tabela.appendChild(tr);
+  }
+
+  // Limpar tabela
+  function limparTabela() {
+    tabela.innerHTML = "";
+  }
+
+  // Atualiza tabela completa (para alterações)
+  function atualizarTabelaCompleta() {
+    db.ref("ocorrencias").once("value").then(snapshot => {
+      limparTabela();
+      const dados = snapshot.val();
+      for (const key in dados) {
+        adicionarLinhaTabela(dados[key]);
+      }
+    });
+  }
+
+  // Atualizar gráfico
+  function atualizarGrafico() {
+    db.ref("ocorrencias").once("value").then(snapshot => {
+      const dados = snapshot.val();
+      if (!dados) return;
+
+      // Conta alertas por dia
+      const contagemPorDia = {};
+      for (const id in dados) {
+        const dia = new Date(dados[id].data).toISOString().split("T")[0];
+        contagemPorDia[dia] = (contagemPorDia[dia] || 0) + 1;
+      }
+
+      const labels = Object.keys(contagemPorDia);
+      const valores = Object.values(contagemPorDia);
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Alertas por Dia',
+            data: valores,
+            backgroundColor: '#1e88e5'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    });
+  }
+
+  // Botões
+
+  function rastrearUltimoAlerta() {
+    if (!ultimoAlerta) return alert("Nenhum alerta recebido ainda.");
+    mapa.setView([ultimoAlerta.lat, ultimoAlerta.lng], 17);
+    if (marcadores[ultimoAlerta.id]) marcadores[ultimoAlerta.id].openPopup();
+  }
+
+  function centralizarMapa() {
+    mapa.setView([-17.0665, 15.7257], 14);
+  }
+
+  function enviarSMS() {
+    if (!ultimoAlerta) return alert("Nenhum alerta para enviar SMS.");
+
+    // Exemplo de requisição para backend que envia SMS - substitua a URL
+    fetch("https://seu-backend.com/api/enviar-sms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lat: ultimoAlerta.lat,
+        lng: ultimoAlerta.lng,
+        descricao: ultimoAlerta.descricao,
+        telefone: "+244938138258" // Número do destinatário
+      })
+    })
+    .then(res => res.json())
+    .then(data => alert("SMS enviado com sucesso!"))
+    .catch(err => alert("Erro ao enviar SMS: " + err.message));
+  }
+
+  function verUsuarios() {
+    window.location.href = "ver-usuarios.html";
+  }
+
+  // Logout
+  function logout() {
+    auth.signOut().then(() => window.location.href = "login.html");
+  }
+</script>
+
+</body>
+</html>

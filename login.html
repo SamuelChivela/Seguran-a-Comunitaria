@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Segurança Comunitária</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background-color: #f0f0f0;
+    }
+    .login-container {
+      max-width: 400px;
+      margin: auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      background: #1e88e5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1565c0;
+    }
+    .msg {
+      margin-top: 1rem;
+      color: red;
+      text-align: center;
+    }
+    .link {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .link a {
+      color: #1e88e5;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <h2>Entrar no Sistema</h2>
+
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="E-mail" required>
+      <input type="password" id="senha" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+
+    <div class="msg" id="msgErro"></div>
+
+    <div class="link">
+      <p>Não tem conta? <a href="cadastro.html">Criar uma conta</a></p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value.trim();
+      const senha = document.getElementById("senha").value;
+      const msgErro = document.getElementById("msgErro");
+
+      if (!email || !senha) {
+        msgErro.textContent = "Preencha todos os campos.";
+        return;
+      }
+
+      auth.signInWithEmailAndPassword(email, senha)
+        .then(cred => {
+          const uid = cred.user.uid;
+          return db.ref("usuarios/" + uid).once("value");
+        })
+        .then(snapshot => {
+          const usuario = snapshot.val();
+          if (!usuario || !usuario.tipo) {
+            msgErro.textContent = "Tipo de usuário não definido.";
+            return;
+          }
+
+          if (usuario.tipo === "admin") {
+            window.location.href = "admin.html";
+          } else if (usuario.tipo === "usuario") {
+            window.location.href = "painel-usuario.html";
+          } else {
+            msgErro.textContent = "Tipo de usuário inválido.";
+          }
+        })
+        .catch(error => {
+          console.error(error);
+          switch (error.code) {
+            case "auth/user-not-found":
+              msgErro.textContent = "Usuário não encontrado.";
+              break;
+            case "auth/wrong-password":
+              msgErro.textContent = "Senha incorreta.";
+              break;
+            case "auth/invalid-email":
+              msgErro.textContent = "E-mail inválido.";
+              break;
+            default:
+              msgErro.textContent = "Erro ao fazer login: " + error.message;
+          }
+        });
+    });
+  </script>
+
+</body>
+</html>

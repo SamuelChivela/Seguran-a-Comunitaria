@@ -1,0 +1,10 @@
+| Campo              | Descrição                                                        |
+| ------------------ | ---------------------------------------------------------------- |
+| `name`             | Nome completo exibido ao instalar o app                          |
+| `short_name`       | Nome curto usado no ícone da tela inicial                        |
+| `description`      | Breve descrição do app                                           |
+| `start_url`        | Página inicial ao abrir o app                                    |
+| `display`          | `standalone` faz o app parecer nativo, sem barra do navegador    |
+| `theme_color`      | Cor da barra superior quando o app é aberto                      |
+| `background_color` | Cor de fundo durante o carregamento inicial                      |
+| `icons`            | Ícones para representar o app (importante ter 192x192 e 512x512) |

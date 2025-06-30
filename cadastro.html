@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro de Usuário</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-bottom: 1rem;
+      text-align: center;
+      color: #1e88e5;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      width: 100%;
+      background-color: #1e88e5;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #1565c0;
+    }
+
+    .mensagem {
+      text-align: center;
+      margin-top: 1rem;
+      color: red;
+    }
+
+    .link-login {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .link-login a {
+      color: #1e88e5;
+      text-decoration: none;
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Cadastro de Usuário</h1>
+</header>
+
+<div class="container">
+  <h2>Preencha os dados</h2>
+
+  <input type="text" id="nome" placeholder="Nome completo" required>
+  <input type="text" id="telefone" placeholder="Número de telefone" required>
+
+  <select id="provincia" required>
+    <option value="">Selecione a Província</option>
+    <option value="Luanda">Luanda</option>
+    <option value="Huambo">Huambo</option>
+    <option value="Benguela">Benguela</option>
+    <option value="Uíge">Uíge</option>
+    <option value="Malanje">Malanje</option>
+    <option value="Namibe">Namibe</option>
+    <option value="Cunene">Cunene</option>
+    <option value="Cuando">Cuando</option>
+    <option value="Cubango">Cubango</option>
+    <option value="Moxico">Moxico</option>
+    <option value="Moxico leste">Moxico leste</option>
+    <option value="Bengo">Bengo</option>
+    <option value="Cabinda">Cabinda</option>
+    <option value="Kuanza Sul">Kuanza Sul</option>
+    <option value="Huambo">Huambo</option>
+    <!-- Adicione mais províncias conforme desejar -->
+  </select>
+
+  <select id="genero" required>
+    <option value="">Selecione o Gênero</option>
+    <option value="Masculino">Masculino</option>
+    <option value="Feminino">Feminino</option>
+  </select>
+
+  <input type="email" id="email" placeholder="Email" required>
+  <input type="password" id="senha" placeholder="Senha (mín. 6 caracteres)" required>
+
+  <button onclick="cadastrar()">Cadastrar</button>
+  <div class="mensagem" id="mensagem"></div>
+
+  <div class="link-login">
+    Já tem conta? <a href="login.html">Entrar</a>
+  </div>
+</div>
+
+
+<script>
+  function cadastrar() {
+    const nome = document.getElementById("nome").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const senha = document.getElementById("senha").value;
+
+    const msg = document.getElementById("mensagem");
+    msg.textContent = "";
+
+    if (!nome || !email || senha.length < 6) {
+      msg.textContent = "Preencha todos os campos corretamente.";
+      return;
+    }
+
+    auth.createUserWithEmailAndPassword(email, senha)
+      .then(cred => {
+        return db.ref("usuarios/" + cred.user.uid).set({
+          nome: nome,
+          email: email,
+          tipo: "usuario"
+        });
+      })
+      .then(() => {
+        alert("✅ Cadastro realizado com sucesso!");
+        window.location.href = "painel-usuario.html";
+      })
+      .catch(error => {
+        msg.textContent = "Erro: " + error.message;
+      });
+  }
+</script>
+
+</body>
+</html>

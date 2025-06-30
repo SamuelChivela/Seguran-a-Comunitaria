@@ -1,0 +1,23 @@
+{
+  "name": "App Segurança Comunitária",
+  "short_name": "Segurança",
+  "description": "Aplicativo para alertas de segurança e emergências na comunidade.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#222222",
+  "orientation": "portrait",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/846/846449.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/846/846449.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

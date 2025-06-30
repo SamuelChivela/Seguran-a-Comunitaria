@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Segurança Comunitária</title>
+
+  <!-- Manifest (PWA) -->
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .logout-btn {
+      position: absolute;
+      right: 1rem;
+      top: 1rem;
+      background: #fff;
+      color: #1e88e5;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #map {
+      height: 55vh;
+      width: 100%;
+    }
+
+    #btnPanico {
+      display: block;
+      width: calc(100% - 2rem);
+      margin: 1rem auto;
+      padding: 1rem;
+      background-color: red;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .alertas {
+      padding: 1rem;
+    }
+
+    .alertas h2 {
+      margin-bottom: 0.5rem;
+    }
+
+    .alertas ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .alertas li {
+      background: #fff;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-left: 6px solid #1e88e5;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Segurança Comunitária</h1>
+    <button class="logout-btn" onclick="logout()">Sair</button>
+  </header>
+
+  <div id="map"></div>
+
+  <button id="btnPanico">🚨 Botão de Pânico</button>
+
+  <div class="alertas">
+    <h2>📍 Ocorrências Recentes</h2>
+    <ul id="listaOcorrencias"></ul>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    // Verifica se usuário está logado
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = "login.html";
+    });
+
+    // Inicializa mapa
+    const mapa = L.map('map').setView([-17.0665, 15.7257], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+
+    const ocorrencias = [];
+
+    function renderOcorrencias() {
+      const lista = document.getElementById("listaOcorrencias");
+      lista.innerHTML = "";
+      ocorrencias.forEach(o => {
+        L.marker([o.lat, o.lng]).addTo(mapa)
+          .bindPopup(`<strong>${o.tipo}</strong><br>${o.descricao}`);
+
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${o.tipo}</strong>: ${o.descricao}<br><small>${new Date(o.data).toLocaleString()}</small>`;
+        lista.appendChild(li);
+      });
+    }
+
+    // Carrega dados do Firebase
+    db.ref("ocorrencias").on("value", snapshot => {
+      const data = snapshot.val();
+      ocorrencias.length = 0;
+      for (let id in data) {
+        ocorrencias.push(data[id]);
+      }
+      renderOcorrencias();
+    });
+
+    // Botão de pânico
+    document.getElementById("btnPanico").addEventListener("click", () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const nova = {
+            tipo: "Alerta de Pânico",
+            descricao: "Usuário solicitou ajuda urgente",
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            data: new Date().toISOString()
+          };
+          db.ref("ocorrencias").push(nova)
+            .then(() => window.location.href = "alerta-enviado.html")
+            .catch(err => alert("Erro ao enviar alerta: " + err.message));
+        }, () => {
+          alert("Erro ao acessar localização.");
+        });
+      } else {
+        alert("Seu dispositivo não suporta geolocalização.");
+      }
+    });
+
+    // Logout
+    function logout() {
+      auth.signOut().then(() => window.location.href = "login.html");
+    }
+  </script>
+
+</body>
+</html>

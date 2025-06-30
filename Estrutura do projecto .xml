@@ -1,0 +1,9 @@
+seguranca-comunitaria/
+├── index.html
+├── login.html ✅
+├── cadastro.html ✅
+├── style.css
+├── script.js ✅
+├── firebase.js ✅
+├── manifest.json
+├── service-worker.js

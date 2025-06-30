@@ -1,0 +1,43 @@
+body, html {
+    margin: 0;
+    font-family: sans-serif;
+    height: 100%;
+  }
+  
+  header {
+    background: #222;
+    color: white;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  #map {
+    height: 50vh;
+  }
+  
+  #btnPanico {
+    width: 100%;
+    padding: 15px;
+    background: red;
+    color: white;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .alertas {
+    padding: 10px;
+    background: #f5f5f5;
+  }
+  
+  .alertas ul {
+    list-style: none;
+    padding: 0;
+  }
+  .btn-usuarios {
+  background-color: #6a1b9a;
+}
+
+.btn-usuarios:hover {
+  background-color: #4a148c;
+}

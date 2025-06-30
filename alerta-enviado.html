@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alerta Enviado</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+      max-width: 450px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #d32f2f;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: #555;
+    }
+
+    .status {
+      margin-top: 1.5rem;
+      font-weight: bold;
+      color: #388e3c;
+    }
+
+    .btn-voltar {
+      margin-top: 2rem;
+      padding: 0.8rem 1.5rem;
+      background-color: #1e88e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .btn-voltar:hover {
+      background-color: #1565c0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>🚨 Alerta Enviado</h1>
+    <p>Seu pedido de ajuda foi enviado com sucesso.</p>
+    <p>Nossa equipe já foi notificada e está a caminho ou monitorando a situação.</p>
+
+    <div class="status">
+      Status: Enviado às <span id="hora"></span>
+    </div>
+
+    <button class="btn-voltar" onclick="voltarPainel()">Voltar ao Painel</button>
+  </div>
+
+  <script>
+    function voltarPainel() {
+      window.location.href = "index.html";
+    }
+
+    const horaAtual = new Date().toLocaleTimeString();
+    document.getElementById("hora").textContent = horaAtual;
+  </script>
+
+</body>
+</html>
